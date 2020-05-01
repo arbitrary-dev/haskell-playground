@@ -22,6 +22,8 @@ dependencies:
 - base >= 4.7 && < 5
 - bytestring
 - conduit
+- http-client
+- http-types
 - http-conduit
 - json-stream
 - regex-tdfa
@@ -29,7 +31,10 @@ dependencies:
 - stm
 - stm-chans
 - text
+- text-manipulate
 - exceptions
+- hakyll
+- terminal-size
 
 ghc-options:
 - -Wall

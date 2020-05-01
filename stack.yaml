@@ -41,6 +41,7 @@ packages:
 #
 extra-deps:
 - json-stream-0.4.2.4@sha256:8b7f17d54a6e1e6311756270f8bcf51e91bab4300945400de66118470dcf51b9,4716
+- hakyll-4.13.3.0@sha256:7d8903f03974691aec049a6188ace8d93457563bad9f078c6faf4c9156e27a33,8867
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

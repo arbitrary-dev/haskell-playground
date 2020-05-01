@@ -4,37 +4,61 @@ module Thread
 ( getThreads
 ) where
 
-import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as B
 import Data.Conduit
 import qualified Data.Conduit.Combinators as C
-import Data.Text as T
-import Data.Text.IO as T
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Data.JsonStream.Parser hiding ((.|))
+import Network.HTTP.Client (parseUrlThrow, responseTimeout, responseTimeoutMicro)
 import Network.HTTP.Simple
 import Control.Monad.Catch
-import Data.Typeable
+import Data.Typeable (Typeable)
+import Hakyll.Web.Html (stripTags)
+import Data.Text.Manipulate (toEllipsis)
+import qualified System.Console.Terminal.Size as TW (Window(..), size)
+import Control.Applicative (many)
 
-getThreads :: IO ()
-getThreads = httpSink (threadsUrlForPage 0) handleRespose
+getThreads :: Maybe Proxy -> IO (Either a ())
+getThreads proxy = do
+  request <- fmap (setRequestProxy proxy) $ threadsUrlForPage 0
+  let r' = request { responseTimeout = responseTimeoutMicro 10000000 } -- 10s
+  httpSink r' handleRespose
+  return $ Right ()
 
-threadsUrlForPage :: Integer -> Request
-threadsUrlForPage 0 = parseRequest_ "https://2ch.hk/po/index.json"
-threadsUrlForPage page = parseRequest_ $ "https://2ch.hk/po/" ++ show page ++ ".json"
+threadsUrlForPage :: Integer -> IO Request
+threadsUrlForPage 0 = parseUrlThrow "https://2ch.hk/po/index.json"
+threadsUrlForPage page = parseUrlThrow $ "https://2ch.hk/po/" ++ show page ++ ".json"
 
-parser :: Parser Text
-parser = "threads" .: (arrayOf $ "posts" .: 0 .! "subject" .: string)
+parser :: Parser (Text, [Text])
+parser = "threads" .: (arrayOf $ (,) <$> "posts" .: 0 .! "subject" .: string
+                                     <*> "posts" .: many (arrayOf $ "comment" .: string))
+
+printThread :: (Text, [Text]) -> IO ()
+printThread (subject, posts) = do
+  T.putStrLn subject
+  window <- TW.size
+  let
+    width =
+      case window of
+        Just (TW.Window _ w) -> w - 6
+        Nothing              -> 70
+  mapM_ (printPost width) posts
+  T.putStrLn ""
+  where
+    printPost width post = T.putStrLn $ " - " <> cutTo width post
+    cutTo width = toEllipsis width . T.strip . T.pack . stripTags . T.unpack
 
 handleRespose :: Response () -> ConduitM B.ByteString Void IO ()
-handleRespose response = do
-  liftIO $ T.putStrLn $ pack $ "The status code was: " ++ show (getResponseStatusCode response)
-  jsonConduit parser .| C.mapM_ T.putStrLn
+handleRespose _ = jsonConduit parser .| C.mapM_ printThread
 
 jsonConduit
   :: MonadThrow m
   => Parser a
   -> ConduitM B.ByteString a m ()
-jsonConduit = go . runParser
+jsonConduit =
+  go . runParser
   where
     go (ParseYield x p) = yield x >> go p
     go (ParseNeedData f) = await >>= maybe

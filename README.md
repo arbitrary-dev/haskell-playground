@@ -1,6 +1,6 @@
 # Haskell playground
 
-Just some adult sandbox.
+Yet another adult sandbox.
 
 ## Threads
 

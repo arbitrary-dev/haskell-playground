@@ -2,15 +2,11 @@ module Proxy
 ( getProxies
 ) where
 
-{-# LANGUAGE OverloadedStrings #-}
-
 import qualified Data.ByteString.Char8      as S8
 import qualified Data.ByteString.Lazy.Char8 as L8
 import           Network.HTTP.Simple
 import           Text.Regex.TDFA
-import           Data.Maybe             (catMaybes)
-
--- TODO make Proxy data type
+import           Data.Maybe                 (catMaybes)
 
 parseProxy :: S8.ByteString -> Maybe Proxy
 parseProxy str = do
@@ -22,6 +18,7 @@ parseProxy str = do
       return $ Proxy ip port
     _ -> Nothing
 
+-- TODO return conduit stream
 getProxies :: IO [Proxy]
 getProxies = do
   let url = "https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list.txt"
